@@ -38,7 +38,7 @@ cd $WORKDIR
 # build redsocks2 first
 <<'COMPILE'
 apt update
-apt install libevent-dev libssl-dev make gcc python3 python3-pip curl iptables iptables-persistent -y
+apt install libevent-dev libssl-dev make gcc python3 net-tools python3-pip curl iptables iptables-persistent -y
 git clone https://github.com/semigodking/redsocks.git
 cd redsocks
 make DISABLE_SHADOWSOCKS=true
@@ -185,7 +185,7 @@ netfilter-persistent save
 #/etc/init.d/rsyslog reload
 #/bin/find $LOGDIR -type f -mtime $LOG_SAVE_DAYS -exec rm -f {} \;
 #exit 0
-EOF
+#EOF
 
 #chmod u+x $LOGDIR/logrotate.sh
 #grep -q "$LOGDIR/logrotate.sh" /var/spool/cron/root ||
