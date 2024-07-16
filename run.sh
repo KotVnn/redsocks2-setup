@@ -225,27 +225,17 @@ status(){
             echo "iptables for udp redirect is err"
 }
 
-case "$1" in
-    start)
-        start
+case \$1 in
+    start) start
         ;;
-    stop)
-        stop
+    stop) stop
         ;;
-    restart)
-        stop
-        start
+    restart) stop;start
         ;;
-    status)
-        if ps aux | grep -v "grep" | grep -q redsocks2; then
-            echo "redsocks2 is running"
-        else
-            echo "redsocks2 is not running"
-        fi
+    status) status
         ;;
-    *)
-        echo "Usage: $0 {start|stop|restart|status}"
-        exit 1
+    *) echo "Usage:\$0 <start|stop|restart|status>"
+        ;;
 esac
 
 exit 0
