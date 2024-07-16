@@ -19,17 +19,17 @@ set -u
 
 
 WORKDIR=$(cd $(dirname $0) && pwd)
-REDSOCKS2_BIN=$WORKDIR/redsocks-release-0.66/redsocks2
-PREFIX_DIR=/usr/local/redsocks2
+REDSOCKS2_BIN=$WORKDIR/redsocks/redsocks2
+PREFIX_DIR=/usr/bin/redsocks2
 LOGDIR=$PREFIX_DIR/log
 LOG_SAVE_DAYS=300
 
 # should be local private ip
-REDSOCKS_SERVER_IP=192.168.1.254
-REDSOCKS_TCP_PORT=10001
-REDSOCKS_UDP_PORT=20001
+REDSOCKS_SERVER_IP=0.0.0.0
+REDSOCKS_TCP_PORT=12345
+REDSOCKS_UDP_PORT=10053
 # socks load balance server or socks proxy server
-SOCKS_SERVER="101.19.11.60:1080 12.5.11.27:1080"
+SOCKS_SERVER="192.168.50.3:50000"
 
 
 cd $WORKDIR
@@ -37,11 +37,11 @@ cd $WORKDIR
 
 # build redsocks2 first
 <<'COMPILE'
-yum install libevent2-devel openssl-devel -y
-wget https://github.com/semigodking/redsocks/archive/release-0.66.zip
-unzip release-0.66
-cd redsocks-release-0.66
-make -j $(grep -c processor /proc/cpuinfo)
+apt update
+apt install libevent-dev libssl-dev git make gcc python3 python3-pip curl iptables iptables-persistent -y
+git clone https://github.com/semigodking/redsocks.git
+cd redsocks
+make DISABLE_SHADOWSOCKS=true
 COMPILE
 
 
@@ -58,7 +58,7 @@ cd $PREFIX_DIR
 # ------------------------------ redsocks.conf -----------------------------
 cat > redsocks.conf <<EOF
 base {
-        log_debug = off;
+        log_debug = on;
         log_info = on;
         //log = stderr;
         log = "file:$PREFIX_DIR/err.log";
@@ -169,27 +169,27 @@ iptables -t nat -I PREROUTING -j LOG --log-prefix 'IPTABLES_LOG:' --log-level de
 iptables -t nat -I POSTROUTING -j LOG --log-prefix 'IPTABLES_LOG:' --log-level debug
 
 # iptables-save
-iptables-save > /etc/sysconfig/iptables
+netfilter-persistent save
 
 # set iptables log
-mkdir -p $LOGDIR
-grep -q '^kern\.\*' /etc/rsyslog.conf &&
-    sed -i "s#^kern\.\*.*#kern.* $LOGDIR/access.log#" /etc/rsyslog.conf ||
-        echo "kern.* $LOGDIR/access.log" >>/etc/rsyslog.conf
-/etc/init.d/rsyslog restart
+#mkdir -p $LOGDIR
+#grep -q '^kern\.\*' /etc/rsyslog.conf &&
+#    sed -i "s#^kern\.\*.*#kern.* $LOGDIR/access.log#" /etc/rsyslog.conf ||
+#        echo "kern.* $LOGDIR/access.log" >>/etc/rsyslog.conf
+#/etc/init.d/rsyslog restart
 
-cat >$LOGDIR/logrotate.sh<<EOF
+#cat >$LOGDIR/logrotate.sh<<EOF
 #!/bin/bash
 # log rotate
-/bin/mv $LOGDIR/access.log{,.\$(/bin/date +%Y%m%d)}
-/etc/init.d/rsyslog reload
-/bin/find $LOGDIR -type f -mtime $LOG_SAVE_DAYS -exec rm -f {} \;
-exit 0
+#/bin/mv $LOGDIR/access.log{,.\$(/bin/date +%Y%m%d)}
+#/etc/init.d/rsyslog reload
+#/bin/find $LOGDIR -type f -mtime $LOG_SAVE_DAYS -exec rm -f {} \;
+#exit 0
 EOF
 
-chmod u+x $LOGDIR/logrotate.sh
-grep -q "$LOGDIR/logrotate.sh" /var/spool/cron/root ||
-    echo "0 0 * * * $LOGDIR/logrotate.sh" >>/var/spool/cron/root
+#chmod u+x $LOGDIR/logrotate.sh
+#grep -q "$LOGDIR/logrotate.sh" /var/spool/cron/root ||
+#    echo "0 0 * * * $LOGDIR/logrotate.sh" >>/var/spool/cron/root
 
 
 # --------------------------- redsocks.service ------------------
@@ -199,10 +199,9 @@ grep -q "$LOGDIR/logrotate.sh" /var/spool/cron/root ||
 cat > redsocks2.service <<EOF
 #!/bin/bash
 
-. /etc/init.d/functions
+.
 
 start(){
-    /etc/init.d/iptables start
     ps aux|egrep -v "grep|\$0" |grep -q redsocks2 && {
         echo -n "redsocks2 already started";failure;echo;} || {
             $PREFIX_DIR/redsocks2 -c $PREFIX_DIR/redsocks.conf && { echo -n "redsocks2 started";success;echo;}
@@ -210,7 +209,6 @@ start(){
 }
 
 stop(){
-    /etc/init.d/iptables stop
     killall redsocks2 2>/dev/null && { echo -n "redsocks2 stopped.";success;echo;} || {
         echo -n "redsocks2 already stopped.";failure;echo;}
 }
