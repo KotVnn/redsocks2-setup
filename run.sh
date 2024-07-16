@@ -147,6 +147,11 @@ for ((i=$(echo $SOCKS_SERVER|xargs -n1|wc -l);i>=1;i--)){
 
 iptables -t nat -A PREROUTING -p tcp -j REDSOCKS2
 
+iptables -t nat -A REDSOCKS2 -p tcp -j REDIRECT --to-ports 12345
+iptables -t nat -A OUTPUT -p tcp -j REDSOCKS
+iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 12345
+iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-ports 12345
+
 # for udp
 ip route del local default dev lo table 100
 ip rule del fwmark 1 lookup 100
