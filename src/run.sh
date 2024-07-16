@@ -199,18 +199,19 @@ netfilter-persistent save
 cat > redsocks2.service <<EOF
 #!/bin/bash
 
-.
-
 start(){
-    ps aux|egrep -v "grep|\$0" |grep -q redsocks2 && {
-        echo -n "redsocks2 already started";failure;echo;} || {
-            $PREFIX_DIR/redsocks2 -c $PREFIX_DIR/redsocks.conf && { echo -n "redsocks2 started";success;echo;}
-        }
+    systemctl iptables restart
+    ps aux | egrep -v "grep|\$0" | grep -q redsocks2 && {
+        echo -n "redsocks2 already started"; echo "failure"; echo;
+    } || {
+        $PREFIX_DIR/redsocks2 -c $PREFIX_DIR/redsocks.conf && { echo -n "redsocks2 started"; echo "success"; echo; }
+    }
 }
 
 stop(){
-    killall redsocks2 2>/dev/null && { echo -n "redsocks2 stopped.";success;echo;} || {
-        echo -n "redsocks2 already stopped.";failure;echo;}
+    systemctl iptables stop
+    killall redsocks2 2>/dev/null && { echo -n "redsocks2 stopped."; echo "success"; echo; } || {
+        echo -n "redsocks2 already stopped."; echo "failure"; echo; }
 }
 
 status(){
@@ -225,17 +226,27 @@ status(){
             echo "iptables for udp redirect is err"
 }
 
-case \$1 in
-    start) start
+case "$1" in
+    start)
+        start
         ;;
-    stop) stop
+    stop)
+        stop
         ;;
-    restart) stop;start
+    restart)
+        stop
+        start
         ;;
-    status) status
+    status)
+        if ps aux | grep -v "grep" | grep -q redsocks2; then
+            echo "redsocks2 is running"
+        else
+            echo "redsocks2 is not running"
+        fi
         ;;
-    *) echo "Usage:\$0 <start|stop|restart|status>"
-        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
 esac
 
 exit 0
