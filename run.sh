@@ -200,18 +200,17 @@ cat > redsocks2.service <<EOF
 #!/bin/bash
 
 start(){
-    systemctl iptables restart
-    ps aux | egrep -v "grep|\$0" | grep -q redsocks2 && {
-        echo -n "redsocks2 already started"; echo "failure"; echo;
-    } || {
-        $PREFIX_DIR/redsocks2 -c $PREFIX_DIR/redsocks.conf && { echo -n "redsocks2 started"; echo "success"; echo; }
-    }
+    systemctl restart iptables
+    ps aux|egrep -v "grep|\$0" |grep -q redsocks2 && {
+        echo -n "redsocks2 already started";failure;echo;} || {
+            $PREFIX_DIR/redsocks2 -c $PREFIX_DIR/redsocks.conf && { echo -n "redsocks2 started";success;echo;}
+        }
 }
 
 stop(){
-    systemctl iptables stop
-    killall redsocks2 2>/dev/null && { echo -n "redsocks2 stopped."; echo "success"; echo; } || {
-        echo -n "redsocks2 already stopped."; echo "failure"; echo; }
+    systemctl stop iptables
+    killall redsocks2 2>/dev/null && { echo -n "redsocks2 stopped.";success;echo;} || {
+        echo -n "redsocks2 already stopped.";failure;echo;}
 }
 
 status(){
